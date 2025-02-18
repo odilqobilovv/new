@@ -6,25 +6,25 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.users.permissions import IsUsingRegisteredDevice
-from apps.users.serializers import RegisterSerializer, LoginSerializer, RefreshTokenSerializer
+from users.permissions import IsUsingRegisteredDevice
+from users.serializers import RegisterSerializer, LoginSerializer, RefreshTokenSerializer
 
 
 class RegisterAPIView(APIView):
     @extend_schema(
         tags=["auth"],
         request=RegisterSerializer,
-        examples=[
-            OpenApiExample(
-                name="Example of Request",
-                value={
-                    'username': 'Jhon',
-                    'email': 'example@gmail.com',
-                    'password': 'qwertyuiop'
-                },
-                description="Example of a user registration request"
-            )
-        ]
+        # examples=[
+        #     OpenApiExample(
+        #         name="Example of Request",
+        #         value={
+        #             'username': 'Jhon',
+        #             'email': 'example@gmail.com',
+        #             'password': 'qwertyuiop'
+        #         },
+        #         description="Example of a user registration request"
+        #     )
+        # ]
     )
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
@@ -43,16 +43,16 @@ class LoginAPIView(APIView):
     @extend_schema(
         tags=["auth"],
         request=LoginSerializer,
-        examples=[
-            OpenApiExample(
-                name="Example of Login Request",
-                value={
-                    'username': 'Jhon',
-                    'password': 'qwertyuiop'
-                },
-                description="Example of a user login request"
-            )
-        ]
+        # examples=[
+        #     OpenApiExample(
+        #         name="Example of Login Request",
+        #         value={
+        #             'username': 'Jhon',
+        #             'password': 'qwertyuiop'
+        #         },
+        #         description="Example of a user login request"
+        #     )
+        # ]
     )
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
