@@ -1,6 +1,7 @@
 from django.apps import AppConfig
 
 
-class CommerceConfig(AppConfig):
+class UsersConfig(AppConfig):
+    app_label = "users"
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'commerce'
+    name = 'users'

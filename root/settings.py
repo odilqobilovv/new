@@ -36,8 +36,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # installed apps
-    'apps.users',
-    'apps.commerce',
+    'users',
+    'seller',
     # installed packages
     'drf_spectacular',
     'rest_framework_simplejwt',
