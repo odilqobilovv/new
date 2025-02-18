@@ -16,14 +16,6 @@ class BaseModel(models.Model):
         abstract = True
 
 
-class Suplier(BaseModel):
-    name = models.CharField(max_length=255)
-    phone = models.CharField(max_length=25)
-    rating = models.FloatField(blank=True)
-
-    def __str__(self):
-        return f'{self.name} | {self.phone}'
-
 class Product(BaseModel):
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE)
     name_ru = models.CharField(max_length=255)
@@ -32,7 +24,7 @@ class Product(BaseModel):
     description_uz = models.CharField(max_length=255)
     price = models.IntegerField()
     amount = models.IntegerField()
-    supplier = models.ForeignKey(Suplier, on_delete=models.SET_NULL, related_name='product', null=True, blank=True)
+    # supplier = models.ForeignKey(Suplier, on_delete=models.SET_NULL, related_name='product', null=True, blank=True)
     min_sell = models.PositiveIntegerField(default=1)
     articul = models.CharField(max_length=8, unique=True, validators=[RegexValidator(r'^\d{8}$', 'Artikule must consist of 8 digits.')], blank=True)
 
@@ -43,6 +35,13 @@ class Product(BaseModel):
             self.articul = self.generate_articul()
         super().save(*args, **kwargs)
 
+    def get_price_for_quantity(self, quantity):
+        # Fetch the bulk price if quantity meets the threshold
+        bulk_prices = self.bulk_prices.filter(min_quantity__lte=quantity).order_by('-min_quantity')
+        if bulk_prices.exists():
+            return bulk_prices.first().price_per_unit  # Return the most suitable bulk price
+        return self.price
+
     @staticmethod
     def generate_articul():
         while True:
@@ -52,7 +51,6 @@ class Product(BaseModel):
 
     def __str__(self):
         return f'{self.name_ru} | {self.shop.name}'
-
 
 
 class ProductVariant(BaseModel):
@@ -67,6 +65,18 @@ class ProductVariant(BaseModel):
 
     def __str__(self):
         return f"{self.product.name_uz} - {self.color} - {self.size}"
+
+
+class BulkPrice(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="bulk_prices")
+    min_quantity = models.PositiveIntegerField()
+    price_per_unit = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        ordering = ['min_quantity']
+
+    def __str__(self):
+        return f'{self.min_quantity}+ units for ${self.price_per_unit} each'
 
 
 
@@ -95,7 +105,7 @@ class CharacteristicsProduct(BaseModel):
     info_uz = models.CharField(max_length=255)
     info_ru = models.CharField(max_length=255)
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='characteristics', blank=True, null=True)
-    product_variants = models.ForeignKey(ProductVariant, on_delete=models.CASCADE, related_name="variant_characteristics", blank=True, null=True)
+    # product_variants = models.ForeignKey(ProductVariant, on_delete=models.CASCADE, related_name="variant_characteristics", blank=True, null=True)
 
     def __str__(self):
         return f"{self.title_uz} | {self.title_ru}"
