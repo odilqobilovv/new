@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from seller.models.products import Product, PhotoProducts, VideoProducts, KeywordsProduct, CharacteristicsProduct, \
     ProductVariant
-from seller.models.orders import Order, OrderItem
+from apps.users.models.orders import Order, OrderItem
 from seller.models.products import Review
 
 
@@ -161,3 +161,9 @@ class ReviewSerializer(serializers.ModelSerializer):
         review = super().create(validated_data)
         review.product.update_rating()
         return review
+
+
+
+class LoginSellerSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)

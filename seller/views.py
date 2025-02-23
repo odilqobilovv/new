@@ -1,13 +1,46 @@
+from django.contrib.auth import authenticate
 from drf_spectacular.utils import extend_schema
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, generics, permissions
+from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.users.serializers import LoginSerializer
 from seller.models.products import Product, Review
-from seller.serializers import ProductsSerializer, ReviewSerializer, OrderSerializer, OrderItemSerializer
-from seller.models.orders import Order, OrderItem
+from seller.serializers import ProductsSerializer
+
+
+class SellerLoginAPIView(APIView):
+    permission_classes = [AllowAny]
+    @extend_schema(
+        request=LoginSerializer,
+    )
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        if serializer.is_valid():
+            username = serializer.validated_data['username']
+            password = serializer.validated_data['password']
+            user = authenticate(username=username, password=password)
+
+            if user:
+                if user.user_type != 'vendor':  # Ensure only sellers can log in
+                    return Response({"error": "Only sellers can log in."}, status=status.HTTP_403_FORBIDDEN)
+                if not user.is_active:
+                    return Response({"error": "Seller account is inactive."}, status=status.HTTP_401_UNAUTHORIZED)
+
+                refresh = RefreshToken.for_user(user)
+                return Response({
+                    "access_token": str(refresh.access_token),
+                    "refresh_token": str(refresh),
+                }, status=status.HTTP_200_OK)
+
+            return Response({"error": "Invalid username or password."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class ProductCreateAPIView(APIView):
     @extend_schema(request=ProductsSerializer)
@@ -30,55 +63,14 @@ class ProductUpdateAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-@extend_schema(request=OrderSerializer)
-class OrderListCreateView(generics.ListCreateAPIView):
-    queryset = Order.objects.all()
-    serializer_class = OrderSerializer
+class ProductsAPIView(generics.ListAPIView):
+    serializer_class = ProductsSerializer
+    queryset = Product.objects.all()
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Order.objects.filter(customer=self.request.user)
+        user = self.request.user
+        if user.user_type == 'vendor':
+            raise PermissionDenied("You are not a vendor and cannot access this view.")
 
-@extend_schema(request=OrderSerializer)
-class OrderDetailView(generics.RetrieveDestroyAPIView):
-    queryset = Order.objects.all()
-    serializer_class = OrderSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        return Order.objects.filter(customer=self.request.user)
-
-@extend_schema(request=OrderItemSerializer)
-class OrderItemCreateView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request, *args, **kwargs):
-        order = Order.objects.get(customer=request.user)
-        serializer = OrderItemSerializer(data=request.data)
-
-        if serializer.is_valid():
-            product = serializer.validated_data['product']
-            quantity = serializer.validated_data['product_quantity']
-
-            if quantity > product.amount:
-                raise ValidationError(f"Not enough stock available. Maximum: {product.amount}")
-
-            order_item = OrderItem.objects.create(order=order, product=product, product_quantity=quantity)
-            product.amount -= quantity
-            product.save()
-            order.update_total_price()
-
-            return Response(OrderSerializer(order).data)
-
-        return Response(serializer.errors, status=400)
-
-
-@extend_schema(request=ReviewSerializer)
-class ReviewListCreateView(generics.ListCreateAPIView):
-    queryset = Review.objects.all()
-    serializer_class = ReviewSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        return Product.objects.filter(seller=user)

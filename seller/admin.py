@@ -6,7 +6,7 @@ from seller.models.products import Product, ProductVariant, KeywordsProduct, Pho
 
 from seller.models import Category
 from seller.models.products import Review
-from seller.models.orders import Order, OrderItem
+from apps.users.models.orders import Order, OrderItem
 from seller.models.shop import Shop
 
 

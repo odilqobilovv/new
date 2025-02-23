@@ -4,7 +4,7 @@ from accounts.models.user import User
 
 class Shop(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
     description = models.CharField(max_length=455)
     image = models.ImageField(upload_to='images/shop/')
 
