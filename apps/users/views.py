@@ -21,7 +21,8 @@ from seller.serializers import OrderSerializer, OrderItemSerializer, ReviewSeria
 
 @extend_schema(request=UserRegistrationSerializer, tags=['user-auth'])
 class UserRegistrationAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = []
+    authentication_classes = []
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
@@ -31,7 +32,8 @@ class UserRegistrationAPIView(APIView):
 
 @extend_schema(request=LoginSerializer, tags=['user-auth'])
 class LoginAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = []
+    authentication_classes = []
     def post(self, request):
         username = request.data.get('username')
         password = request.data.get('password')

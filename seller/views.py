@@ -14,7 +14,8 @@ from seller.serializers import ProductsSerializer
 
 
 class SellerLoginAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = []
+    authentication_classes = []
     @extend_schema(
         request=LoginSerializer,
     )

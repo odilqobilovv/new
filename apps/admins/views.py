@@ -13,7 +13,8 @@ from root.permissions import IsAdminUserCustom
 
 
 class AdminLoginAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = []
+    authentication_classes = []
 
     @extend_schema(
         request=LoginSerializer,
