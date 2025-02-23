@@ -2,56 +2,8 @@ from rest_framework import serializers
 
 from seller.models.products import Product, PhotoProducts, VideoProducts, KeywordsProduct, CharacteristicsProduct, \
     ProductVariant
-from seller.models.shop import Shop
 from seller.models.orders import Order, OrderItem
-
-
-# class ShopSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Shop
-#         fields = '__all__'
-#
-#
-# class ProductSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Product
-#         fields = '__all__'
-#
-# class OrderItemSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = OrderItem
-#         fields = '__all__'
-#
-# class OrderSerializer(serializers.ModelSerializer):
-#     items = OrderItemSerializer(many=True)
-#
-#     class Meta:
-#         model = Order
-#         fields = ['customer', 'items', 'total_price']
-#
-#     def create(self, validated_data):
-#         items_data = validated_data.pop('items')
-#         order = Order.objects.create(**validated_data)
-#         total_price = 0
-#
-#         for item_data in items_data:
-#             product = Product.objects.get(id=item_data['product'])
-#             packs = item_data['packs']
-#             total_quantity = packs * product.bulk_quantity
-#
-#             if total_quantity > product.stock:
-#                 raise serializers.ValidationError(f"Not enough stock. Max: {product.stock // product.bulk_quantity} packs.")
-#
-#             OrderItem.objects.create(order=order, product=product, packs=packs)
-#             total_price += product.price * packs  # Price per pack
-#
-#             # Reduce stock
-#             product.stock -= total_quantity
-#             product.save()
-#
-#         order.total_price = total_price
-#         order.save()
-#         return order
+from seller.models.products import Review
 
 
 class PhotoProductsSerializer(serializers.ModelSerializer):
@@ -155,3 +107,57 @@ class ProductsSerializer(serializers.ModelSerializer):
             ProductVariant.objects.create(product=instance, **variant)
 
         return instance
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'order', 'product', 'product_quantity', 'price_per_unit']
+        read_only_fields = ['price_per_unit']
+
+    def validate(self, data):
+        product = data['product']
+        quantity = data['product_quantity']
+
+        if quantity > product.amount:
+            raise serializers.ValidationError(f"Not enough stock available. Maximum available: {product.amount} units.")
+
+        return data
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    order_items = OrderItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ['id', 'customer', 'total_price', 'order_items']
+        read_only_fields = ['total_price']
+
+    def create(self, validated_data):
+        request = self.context['request']
+        user = request.user
+
+        order = Order.objects.create(customer=user)
+
+        return order
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ['id', 'user', 'product', 'rating', 'comment', 'created_at']
+        read_only_fields = ['user']
+
+    def validate(self, data):
+        user = self.context['request'].user
+        product = data['product']
+
+        if not OrderItem.objects.filter(order__customer=user, product=product).exists():
+            raise serializers.ValidationError("You can only review products you have purchased.")
+
+        return data
+
+    def create(self, validated_data):
+        review = super().create(validated_data)
+        review.product.update_rating()
+        return review

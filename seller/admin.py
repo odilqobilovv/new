@@ -5,7 +5,7 @@ from seller.models.products import Product, ProductVariant, KeywordsProduct, Pho
     CharacteristicsProduct, BulkPrice
 
 from seller.models import Category
-from seller.models.products import Comment
+from seller.models.products import Review
 from seller.models.orders import Order, OrderItem
 from seller.models.shop import Shop
 
@@ -14,7 +14,7 @@ admin.site.register(Order)
 admin.site.register(OrderItem)
 admin.site.register(Category)
 admin.site.register(Shop)
-admin.site.register(Comment)
+admin.site.register(Review)
 
 class PhotoProductsInline(admin.TabularInline):
     model = PhotoProducts

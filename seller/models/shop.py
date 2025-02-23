@@ -1,6 +1,6 @@
 from django.db import models
 
-from users.models.user import User
+from accounts.models.user import User
 
 class Shop(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE)

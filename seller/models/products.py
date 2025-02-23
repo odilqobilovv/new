@@ -1,11 +1,11 @@
 import random
 
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 from django.db import models
 
 from seller.models.category import Category
 from seller.models.shop import Shop
-from users.models.user import User
+from accounts.models.user import User
 
 
 class BaseModel(models.Model):
@@ -24,9 +24,10 @@ class Product(BaseModel):
     description_uz = models.CharField(max_length=255)
     price = models.IntegerField()
     amount = models.IntegerField()
-    # supplier = models.ForeignKey(Suplier, on_delete=models.SET_NULL, related_name='product', null=True, blank=True)
     min_sell = models.PositiveIntegerField(default=1)
     articul = models.CharField(max_length=8, unique=True, validators=[RegexValidator(r'^\d{8}$', 'Artikule must consist of 8 digits.')], blank=True)
+
+    rating = models.FloatField(default=0.0)
 
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='category')
 
@@ -35,11 +36,20 @@ class Product(BaseModel):
             self.articul = self.generate_articul()
         super().save(*args, **kwargs)
 
+
+    def update_rating(self):
+        reviews = self.reviews.all()
+        total_reviews = reviews.count()
+        if total_reviews > 0:
+            self.rating = sum(review.rating for review in reviews) / total_reviews
+        else:
+            self.rating = 0.0
+        self.save()
+
     def get_price_for_quantity(self, quantity):
-        # Fetch the bulk price if quantity meets the threshold
         bulk_prices = self.bulk_prices.filter(min_quantity__lte=quantity).order_by('-min_quantity')
         if bulk_prices.exists():
-            return bulk_prices.first().price_per_unit  # Return the most suitable bulk price
+            return bulk_prices.first().price_per_unit  # Get the best bulk price
         return self.price
 
     @staticmethod
@@ -111,17 +121,23 @@ class CharacteristicsProduct(BaseModel):
         return f"{self.title_uz} | {self.title_ru}"
 
 
-class Comment(BaseModel):
-    class RATING_CHOICES(models.IntegerChoices):
-        star1 = 1
-        star2 = 2
-        star3 = 3
-        star4 = 4
-        star5 = 5
+class Review(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="reviews")
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    comment = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
-    comment = models.CharField(max_length=255)
-    rating = models.CharField(max_length=20, choices=RATING_CHOICES)
+    class Meta:
+        unique_together = ('user', 'product')
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.product.update_rating()
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        self.product.update_rating()
 
     def __str__(self):
-        return f'{self.user} | {self.rating}'
+        return f"{self.user.username} - {self.product.name_ru} ({self.rating} stars)"

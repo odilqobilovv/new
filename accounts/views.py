@@ -6,8 +6,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from users.permissions import IsUsingRegisteredDevice
-from users.serializers import RegisterSerializer, LoginSerializer, RefreshTokenSerializer
+from accounts.permissions import IsUsingRegisteredDevice
+from accounts.serializers import RegisterSerializer, LoginSerializer, RefreshTokenSerializer
 
 
 class RegisterAPIView(APIView):
