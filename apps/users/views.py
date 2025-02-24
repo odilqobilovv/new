@@ -110,7 +110,7 @@ class ReviewListCreateView(generics.ListCreateAPIView):
 @extend_schema(request=ProductDataSerializer)
 class ProductsGetAPIView(generics.ListAPIView):
     queryset = Product.objects.all()
-    serializer_class = ProductDataSerializer
+    serializer_class = ProductsSerializer
     filter_backends = (SearchFilter, )
     search_fields = ['name_ru', 'name_uz', 'articul']
 
